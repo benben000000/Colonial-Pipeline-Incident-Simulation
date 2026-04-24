@@ -6,7 +6,7 @@ Simulates DarkSide ransomware behavioral telemetry for Splunk JSON ingestion.
 Generates synthetic Windows Event Logs (Event ID 4688) as JSON objects matching the Splunk Common Information Model (CIM), enabling SIEM correlation rule testing.
 #>
 
-$OutputFile = ".\splunk_darkside_telemetry.json"
+$OutputFile = "d:\CyberSecurityRuleBook\githubprojects\CyberSecurity RuleBook - Governance Platform\public\data\splunk_darkside_telemetry.json"
 if (Test-Path $OutputFile) { Remove-Item $OutputFile }
 
 function Write-SplunkJson {

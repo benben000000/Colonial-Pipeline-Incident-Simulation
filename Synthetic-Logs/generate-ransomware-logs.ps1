@@ -1,32 +1,42 @@
 <#
 .SYNOPSIS
-Simulates DarkSide ransomware behavioral telemetry for SIEM ingestion.
+Simulates DarkSide ransomware behavioral telemetry for Splunk JSON ingestion.
 
 .DESCRIPTION
-This script generates synthetic Windows Event Logs (Event ID 4688 - Process Creation) to simulate the tactics used in the Colonial Pipeline breach, specifically:
-- Disabling security services
-- Deleting Volume Shadow Copies
-- Encrypting OT/ICS interface files
-
-.NOTES
-Run this only in a controlled lab environment. This does NOT execute real malware; it only writes log entries to the Application event log.
+Generates synthetic Windows Event Logs (Event ID 4688) as JSON objects matching the Splunk Common Information Model (CIM), enabling SIEM correlation rule testing.
 #>
 
-$Source = "DarkSide-Simulation"
-if ([System.Diagnostics.EventLog]::SourceExists($Source) -eq $false) {
-    New-EventLog -LogName Application -Source $Source
+$OutputFile = ".\splunk_darkside_telemetry.json"
+if (Test-Path $OutputFile) { Remove-Item $OutputFile }
+
+function Write-SplunkJson {
+    param (
+        [string]$EventCode,
+        [string]$ProcessName,
+        [string]$CommandLine,
+        [string]$Message
+    )
+    $timestamp = (Get-Date).ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
+    $log = @{
+        time = $timestamp
+        source = "WinEventLog:Security"
+        sourcetype = "XmlWinEventLog"
+        host = "OT-HMI-01"
+        EventCode = $EventCode
+        ProcessName = $ProcessName
+        CommandLine = $CommandLine
+        Message = $Message
+    }
+    $log | ConvertTo-Json -Depth 3 -Compress | Out-File -FilePath $OutputFile -Append -Encoding utf8
 }
 
 Write-Host "[*] Simulating T1489: Service Stop..." -ForegroundColor Yellow
-$msg1 = "Process Creation: cmd.exe /c net stop mpssvc"
-Write-EventLog -LogName Application -Source $Source -EntryType Warning -EventId 4688 -Message $msg1
+Write-SplunkJson -EventCode "4688" -ProcessName "C:\Windows\System32\cmd.exe" -CommandLine "cmd.exe /c net stop mpssvc" -Message "A new process has been created."
 
 Write-Host "[*] Simulating T1490: Inhibit System Recovery..." -ForegroundColor Red
-$msg2 = "Process Creation: vssadmin.exe Delete Shadows /All /Quiet"
-Write-EventLog -LogName Application -Source $Source -EntryType Error -EventId 4688 -Message $msg2
+Write-SplunkJson -EventCode "4688" -ProcessName "C:\Windows\System32\vssadmin.exe" -CommandLine "vssadmin.exe Delete Shadows /All /Quiet" -Message "A new process has been created."
 
-Write-Host "[*] Simulating OT Environment Impact..." -ForegroundColor DarkRed
-$msg3 = "File Modified: C:\SCADA\Config\HMI_layout.ini.darkside"
-Write-EventLog -LogName Application -Source $Source -EntryType Error -EventId 4663 -Message $msg3
+Write-Host "[*] Simulating File Encryption..." -ForegroundColor DarkRed
+Write-SplunkJson -EventCode "4663" -ProcessName "C:\Users\Public\darkside.exe" -CommandLine "N/A" -Message "An attempt was made to access an object. File: C:\SCADA\Config\HMI_layout.ini.darkside"
 
-Write-Host "[+] Synthetic telemetry injected successfully." -ForegroundColor Green
+Write-Host "[+] Splunk JSON telemetry generated at $OutputFile" -ForegroundColor Green

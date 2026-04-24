@@ -39,4 +39,12 @@ Write-SplunkJson -EventCode "4688" -ProcessName "C:\Windows\System32\vssadmin.ex
 Write-Host "[*] Simulating File Encryption..." -ForegroundColor DarkRed
 Write-SplunkJson -EventCode "4663" -ProcessName "C:\Users\Public\darkside.exe" -CommandLine "N/A" -Message "An attempt was made to access an object. File: C:\SCADA\Config\HMI_layout.ini.darkside"
 
+Start-Sleep -Seconds 2
+
+Write-Host "[*] Simulating EDR Containment: Process Termination..." -ForegroundColor Cyan
+Write-SplunkJson -EventCode "4689" -ProcessName "C:\Users\Public\darkside.exe" -CommandLine "N/A" -Message "A process has exited. Status: 0x0"
+
+Write-Host "[*] Simulating EDR Containment: WFP Network Block..." -ForegroundColor Cyan
+Write-SplunkJson -EventCode "5156" -ProcessName "System" -CommandLine "N/A" -Message "The Windows Filtering Platform has blocked a connection."
+
 Write-Host "[+] Splunk JSON telemetry generated at $OutputFile" -ForegroundColor Green
